@@ -1,0 +1,211 @@
+#!/usr/bin/env perl
+
+package main;
+
+our $VERSION = 0.01;
+
+use strict;
+use warnings;
+use File::Basename;
+use 5.10.00;
+
+
+##------------------------------------------------------------
+use lib dirname($0) . '/../lib/';
+use lib '/usr/share/nagios-plugins/lib/';
+use Net::OpenVPN::Manage;
+use Nagios::Plugin;
+
+
+##------------------------------------------------------------
+my $short_name = 'OVPN_MGMT';
+
+my $np = getNagiosPlugin();
+my $mc = getMgmtClient($np->opts);
+
+runChecks($np, $mc);
+
+$np->nagios_exit($np->check_messages(
+    join     => '; '
+  , join_all => ' - '
+));
+
+
+##------------------------------------------------------------
+sub runChecks {
+    my $np = shift;
+    my $mc = shift;
+
+    unless( defined($mc) ) {
+        $np->add_message(CRITICAL, 'Couldn\'t connect to Mgmt-Service');
+        return;
+    }
+
+    my $opts    = $np->opts;
+    my $stats   = $mc->status_ref();
+    my $clients = $stats->{'CLIENT_LIST'};
+
+
+    #---- check expected (and unexpected) clients
+    my ($res, $perf) = checkClientList(
+        $clients
+      , $opts->client
+      , $opts->unknown_log
+      , $opts->unknown_crit
+    );
+    map { $np->add_message(@$_) } @$res;
+    map { $np->add_perfdata(
+        label => $_->[0]
+      , value => $_->[1]
+      , uom   => $_->[2]
+    ) } @$perf;
+
+    #---- more checks
+    # [...]
+}
+
+##------------------------------------------------------------
+sub checkClientList {
+    my $clients = shift || [];
+    my $wanted = shift || [];
+    my $unkn_log = shift || 0;
+    my $unkn_state = (shift) ? CRITICAL : WARNING;
+
+    my @res = ();
+    my @perf = ();
+
+    my %wanted = map { $_ => 1 } @{$wanted};
+    my @unknown = ();
+    my $time = time();
+
+    foreach my $client ( @$clients ) {
+        my $name = $client->[0];
+
+        if (exists $wanted{$name}) {
+            push(
+                @perf
+              , [ "${name}_bytes_recv" , $client->[3] , 'b' ]
+              , [ "${name}_bytes_sent" , $client->[4] , 'b' ]
+              , [ "${name}_conn_time"  , $time - $client->[6] , 's' ]
+            );
+
+            delete $wanted{$name};
+        } else {
+            push(@unknown, $name);
+        }
+    }
+
+    if (scalar keys %wanted){
+        my @names = map { "'$_'" } keys %wanted;
+        push( @res, [CRITICAL, "not connected: " . join(',', @names) ] );
+    }
+
+    if ($unkn_log and scalar @unknown) {
+        my @names = map { "'$_'" } @unknown;
+        push( @res, [$unkn_state, "unwanted connections: " . join(',', @names) ] );
+    }
+
+    return ( \@res, \@perf );
+}
+
+##------------------------------------------------------------
+sub getMgmtClient {
+    my $opts = shift;
+
+    my $mc = Net::OpenVPN::Manage->new({
+        host     => $opts->host
+      , port     => $opts->port
+      , password => $opts->pass
+      , timeout  => $opts->timeout
+    });
+
+    if ($mc->connect()) {
+        # FIXXME: we need to call help(),
+        # to check if we are really connected
+        if ($mc->help() ne '0') {
+            return $mc;
+        }
+    }
+
+    return undef;
+}
+
+##------------------------------------------------------------
+sub getNagiosPlugin {
+    my $np = Nagios::Plugin->new({
+        version   => $VERSION
+      , timeout   => getGlobalOpt('timeout')
+      , shortname => $short_name
+      , usage     => basename($0) . ' [OPTIONS ...]'
+    });
+
+    $np->add_arg(
+        spec    => 'host|H=s'
+      , help    => 'Host where openvpn listens for management connection'
+      , default => getGlobalOpt('host')
+    );
+
+    $np->add_arg(
+        spec    => 'port|P=s'
+      , help    => 'Port where openvpn listens for management connection'
+      , default => getGlobalOpt('port')
+    );
+
+    $np->add_arg(
+        spec    => 'pass|p=s'
+      , help    => 'Password for openvpn management connection'
+      , default => getGlobalOpt('pass')
+    );
+
+    $np->add_arg(
+        spec    => 'client|C=s@'
+      , help    => 'client(s) which we expect to be connected'
+      , default => getGlobalOpt('client', [])
+    );
+
+    $np->add_arg(
+        spec    => 'unknown_log'
+      , help    => 'log unknown/unexpected clients'
+      , default => 0
+    );
+
+    $np->add_arg(
+        spec    => 'unknown_crit'
+      , help    => 'log unknown/unexpected clients with CRITICAL instead of WARNING'
+      , default => 0
+    );
+
+    $np->getopts();
+
+    return $np;
+}
+
+##------------------------------------------------------------
+sub getGlobalOpt {
+    my $key = uc(shift);
+    my $default = shift;
+
+    my %defaults = (
+        'TIMEOUT' => 15
+      , 'HOST'    => '127.0.0.1'
+      , 'PORT'    => 1195
+    );
+
+    $key =~ s/-/_/g;
+
+    foreach my $sys ('ICINGA', 'NAGIOS') {
+        foreach my $type ('HOST', 'SERVICE') {
+            my $env_key = $sys . '__' . $type . $short_name . '_' . $key;
+
+            if (exists $ENV{$env_key}) {
+                return $ENV{$env_key};
+            }
+        }
+    }
+
+    if (exists $defaults{$key}) {
+        return $defaults{$key};
+    }
+
+    return $default;
+}

@@ -1,0 +1,20 @@
+Source: nagios-check-openvpn-mgmt
+Section: net
+Priority: extra
+Maintainer: Hannes Hoerl <hannes.hoerl@snowreporter.com>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+#Homepage: <insert the upstream URL, if relevant>
+#Vcs-Git: git://git.debian.org/collab-maint/nagios-check-openvpn-mgmt.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/nagios-check-openvpn-mgmt.git;a=summary
+
+Package: nagios-check-openvpn-mgmt
+Architecture: all
+Depends: ${misc:Depends}, ${perl:Depends}, libnagios-plugin-perl, libnet-telnet-perl
+Description: Icinga/Nagios-check OpenVPN via its Management Service
+ Icinga/Nagios-plugin based on Nagios::Plugin for checking
+ an OpenVPN server via its Managemen Services.
+ Currently included checks:
+   * connected clients
+   * unwanted connected clients
+

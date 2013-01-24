@@ -1,0 +1,5 @@
+nagios-check-openvpn-mgmt (0.0.1-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Hannes Hoerl <hannes.hoerl@snowreporter.com>  Thu, 24 Jan 2013 09:57:48 +0100

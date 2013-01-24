@@ -1,0 +1,2 @@
+src/check_ovpn_mgmt /usr/lib/nagios/plugins/
+lib/Net/ /usr/share/nagios-plugins/lib/
