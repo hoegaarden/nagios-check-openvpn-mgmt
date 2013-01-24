@@ -25,3 +25,9 @@ License: GPL-2+
 # different copyright/license attached and list them here.
 # Please avoid to pick license terms that are more restrictive than the
 # packaged work, as it may make Debian's contributions unacceptable upstream.
+
+Files: lib/Net*
+Copyright: 2006 Aaron Meyer / MeyerTech.net <meyeaard@meyertech.net>
+License: Perl
+ This module is free software; you can redistribute it or modify it under the
+ same terms as Perl itself.

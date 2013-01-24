@@ -11,7 +11,7 @@ Standards-Version: 3.9.3
 Package: nagios-check-openvpn-mgmt
 Architecture: all
 Depends: ${misc:Depends}, ${perl:Depends}, libnagios-plugin-perl, libnet-telnet-perl
-Description: Icinga/Nagios-check OpenVPN via its Management Service
+Description: Icinga/Nagios check for OpenVPN via its Management Service
  Icinga/Nagios-plugin based on Nagios::Plugin for checking
  an OpenVPN server via its Managemen Services.
  Currently included checks:

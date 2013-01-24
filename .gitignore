@@ -1,1 +1,6 @@
 lib/Net*
+
+debian/files
+debian/nagios-check-openvpn-mgmt*
+debian/nagios-check-openvpn-mgmt*
+debian/nagios-check-openvpn-mgmt*
